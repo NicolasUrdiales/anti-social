@@ -22,7 +22,7 @@ const loginValidator= async (nickName: string, password: string, capturarError: 
             return;
           }
     
-          if (password !== "123456") {
+          if (password != "123456") {
             capturarError("Contraseña incorrecta");
             return;
           }
