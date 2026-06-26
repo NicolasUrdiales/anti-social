@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from "lucide-react";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -28,27 +28,50 @@ const GitHubIcon = () => (
   </svg>
 );
 
-export default function LoginPage() {
+const PasswordStrength = ({ password }: { password: string }) => {
+  if (!password) return null;
+  const strength = password.length < 4 ? 1 : password.length < 7 ? 2 : 3;
+  const labels = ["", "Débil", "Media", "Fuerte"];
+  const colors = ["", "bg-red-500", "bg-yellow-500", "bg-green-500"];
+  return (
+    <div className="mt-2">
+      <div className="flex gap-1 mb-1">
+        {[1, 2, 3].map(i => (
+          <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= strength ? colors[strength] : "bg-gray-200 dark:bg-gray-700"}`} />
+        ))}
+      </div>
+      <p className={`text-xs font-medium ${strength === 1 ? "text-red-500" : strength === 2 ? "text-yellow-500" : "text-green-500"}`}>
+        {labels[strength]}
+      </p>
+    </div>
+  );
+};
+
+export default function RegisterPage() {
   const [nickName, setNickName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const passwordsMatch = confirmPassword && password === confirmPassword;
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!nickName || !password) { setError("Por favor completá todos los campos."); return; }
-    if (password !== "123456") { setError("Contraseña incorrecta. (Demo: la contraseña es 123456)"); return; }
+    if (!nickName || !password || !confirmPassword) { setError("Por favor completá todos los campos."); return; }
+    if (password !== confirmPassword) { setError("Las contraseñas no coinciden."); return; }
     try {
       setLoading(true);
-      const user = await api.login(nickName);
-      if (user) { login(user); navigate("/"); }
+      const newUser = await api.register(nickName);
+      if (newUser) { login(newUser); navigate("/"); }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
+      setError(err instanceof Error ? err.message : "Error al registrar usuario");
     } finally {
       setLoading(false);
     }
@@ -58,7 +81,7 @@ export default function LoginPage() {
     setSocialLoading(provider);
     await new Promise(r => setTimeout(r, 1500));
     setSocialLoading(null);
-    setError(`El login con ${provider} no está disponible en esta demo.`);
+    setError(`El registro con ${provider} no está disponible en esta demo.`);
   };
 
   const socialProviders = [
@@ -70,8 +93,8 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 py-20 sm:py-24 overflow-hidden bg-white dark:bg-gray-950">
       <div className="absolute inset-0 -z-10 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-64 sm:w-80 h-64 sm:h-80 bg-indigo-300/20 dark:bg-indigo-700/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-56 sm:w-64 h-56 sm:h-64 bg-purple-300/20 dark:bg-purple-700/15 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 w-64 sm:w-80 h-64 sm:h-80 bg-purple-300/20 dark:bg-purple-700/15 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-1/4 w-56 sm:w-64 h-56 sm:h-64 bg-indigo-300/20 dark:bg-indigo-700/15 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md">
@@ -82,12 +105,12 @@ export default function LoginPage() {
             </div>
           </Link>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-1">
-            Bienvenido de nuevo
+            Creá tu cuenta
           </h1>
           <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-            ¿No tenés cuenta?{" "}
-            <Link to="/register" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
-              Registrate gratis
+            ¿Ya tenés una?{" "}
+            <Link to="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+              Iniciá sesión
             </Link>
           </p>
         </div>
@@ -100,7 +123,7 @@ export default function LoginPage() {
                 onClick={() => handleSocialLogin(name)}
                 disabled={!!socialLoading}
                 className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${bg} disabled:opacity-60 disabled:cursor-not-allowed`}
-                title={`Continuar con ${name}`}
+                title={`Registrarse con ${name}`}
               >
                 {socialLoading === name
                   ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -113,11 +136,11 @@ export default function LoginPage() {
 
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-            <span className="text-xs text-gray-400 dark:text-gray-600 font-medium">o con tu cuenta</span>
+            <span className="text-xs text-gray-400 dark:text-gray-600 font-medium">o con nickname</span>
             <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="nickName" className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Nickname
@@ -125,11 +148,10 @@ export default function LoginPage() {
               <input
                 id="nickName"
                 type="text"
-                autoComplete="username"
                 required
                 value={nickName}
                 onChange={(e) => setNickName(e.target.value)}
-                placeholder="Tu nickname (ej: testUser)"
+                placeholder="Elegí un nickname único"
                 className="w-full h-11 sm:h-12 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
               />
             </div>
@@ -142,11 +164,10 @@ export default function LoginPage() {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••"
+                  placeholder="Creá una contraseña"
                   className="w-full h-11 sm:h-12 px-4 pr-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
                 />
                 <button
@@ -157,6 +178,39 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <PasswordStrength password={password} />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Confirmar contraseña
+              </label>
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirm ? "text" : "password"}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repetí tu contraseña"
+                  className="w-full h-11 sm:h-12 px-4 pr-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-sm sm:text-base"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {confirmPassword && (
+                <div className={`flex items-center gap-1.5 text-xs font-medium mt-1 ${passwordsMatch ? "text-green-500" : "text-red-500"}`}>
+                  {passwordsMatch
+                    ? <><CheckCircle className="w-3.5 h-3.5" /> Las contraseñas coinciden</>
+                    : <><AlertCircle className="w-3.5 h-3.5" /> Las contraseñas no coinciden</>
+                  }
+                </div>
+              )}
             </div>
 
             {error && (
@@ -168,23 +222,19 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (!!confirmPassword && !passwordsMatch)}
               className="w-full h-11 sm:h-12 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all duration-200 group text-sm sm:text-base"
             >
               {loading
                 ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 : <>
-                    Iniciar sesión
+                    Crear cuenta
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                   </>
               }
             </button>
           </form>
         </div>
-
-        <p className="text-center text-xs text-gray-400 dark:text-gray-600 mt-4 sm:mt-6">
-          Demo: usuario <code className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">testUser</code> · contraseña <code className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">123456</code>
-        </p>
       </div>
     </div>
   );
