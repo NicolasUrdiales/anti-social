@@ -42,7 +42,7 @@ export const PostDetail = () => {
     if (!commentText.trim() || !post || !user) return;
     try {
       setSubmittingComment(true);
-      const newComment = await api.addComment(post.id, user.id, commentText);
+      const newComment = await api.addComment(post._id, user._id, commentText);
       setPost((prev: Post | null) => prev ? { ...prev, comments: [...prev.comments, newComment] } : null);
       setCommentText("");
     } catch (err) {

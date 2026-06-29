@@ -44,47 +44,54 @@ export const api = {
   },
 
   
-
   getUserById: async (userId: string): Promise<User | null> => {
-    await delay(300);
-    return users.find(u => u._id === userId) || null;
+    try {
+      const response = await fetch(`http://localhost:4002/users/${userId}`);
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    }
   },
 
-
-
   getPostById: async (id: string): Promise<Post | null> => {
-    await delay(500);
-    const post = posts.find(p => p._id === id);
-    if (!post) throw new Error("Post no encontrado");
-    return post;
+    const response = await fetch(`http://localhost:4002/posts/${id}`);
+    if (!response.ok) throw new Error("Post no encontrado");
+    const post: Post = await response.json();
+    return {
+      ...post,
+      userId: typeof post.user === 'string' ? post.user : post.user?._id,
+    };
   },
 
   getPostsByUser: async (userId: string): Promise<Post[]> => {
-    await delay(800);
-    return posts
-      .filter(p => p.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    try {
+      const response = await fetch('http://localhost:4002/posts');
+      if (!response.ok) return [];
+      const allPosts: Post[] = await response.json();
+      return allPosts
+        .filter(p => {
+          const uid = typeof p.user === 'string' ? p.user : p.user?._id;
+          return uid === userId;
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map(p => ({
+          ...p,
+          userId: typeof p.user === 'string' ? p.user : p.user?._id,
+        }));
+    } catch {
+      return [];
+    }
   },
 
-
-
-
   addComment: async (postId: string, userId: string, text: string): Promise<Comment> => {
-    await delay(800);
-    const postIndex = posts.findIndex(p => p._id === postId);
-    if (postIndex === -1) throw new Error("Post no encontrado");
-    const user = users.find(u => u._id === userId);
-    if (!user) throw new Error("Usuario no válido");
-    const newComment: Comment = {
-      id: Math.random().toString(36).substr(2, 9),
-      postId,
-      userId,
-      user,
-      text,
-      createdAt: new Date().toISOString()
-    };
-    posts[postIndex].comments.push(newComment);
-    return newComment;
+    const response = await fetch('http://localhost:4002/comments/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, user: userId, post: postId }),
+    });
+    if (!response.ok) throw new Error("Error al crear comentario");
+    return await response.json();
   },
 
   /*getTags: async (): Promise<string[]> => {

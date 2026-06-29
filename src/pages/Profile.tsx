@@ -132,13 +132,13 @@ export const Profile = () => {
           </div>
         ) : (
           <div className="flex flex-col">
-            {posts.map((posts) => (
-              <div key={posts.id} className="relative">
-                <PostCard post={posts} />
+            {posts.map((post) => (
+              <div key={post._id} className="relative">
+                <PostCard post={post} />
                 <Link
-                  to={`/post/${posts.id}`}
+                  to={`/post/${post._id}`}
                   className="absolute inset-0 z-0"
-                  aria-label={`Ver post de ${posts.user.nickName}`}
+                  aria-label={`Ver post de ${post.user?.nickName || ''}`}
                 />
               </div>
             ))}
