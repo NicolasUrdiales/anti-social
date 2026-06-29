@@ -1,4 +1,4 @@
-import type { User } from "../types/user";
+import type { User } from "../types/index";
 
 
 
@@ -7,7 +7,7 @@ const loginValidator= async (nickName: string, password: string, capturarError: 
     try {
     
           const response = await fetch(
-            "http://localhost:3000/users"
+            "http://localhost:4002/users"
           );
     
           const users = await response.json();

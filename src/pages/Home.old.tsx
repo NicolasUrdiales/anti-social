@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../services/api";
-import type { Post } from "../types";
+import type { Post, Tag } from "../types";
 import { PostCard } from "../components/features/PostCard";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/Button";
@@ -9,6 +8,9 @@ import {
   Zap, Shield, MessageCircle, Users, ArrowRight,
   TrendingUp, Star, Coffee
 } from "lucide-react";
+
+import { getPosts } from "../services/postService";
+import { getTags } from "../services/tagService";
 
 const LandingPage = () => {
   const features = [
@@ -255,109 +257,217 @@ const LandingPage = () => {
 
 const FeedPage = () => {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const [loading, setLoading] = useState(false);
+
   const [page, setPage] = useState(1);
+
   const [hasMore, setHasMore] = useState(true);
+
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  const loadData = useCallback(async (isReset = false) => {
+  const loadData = useCallback(async () => {
     try {
-      if (isReset) { setLoading(true); setPage(1); }
-      const fetchedPosts = await api.getPosts(activeTag || undefined);
-      if (isReset) {
-        setPosts(fetchedPosts);
-      } else {
-        setPosts(prev => [...prev, ...fetchedPosts.map((p: Post) => ({ ...p, id: p.id + Math.random().toString(36) }))]);
+      setLoading(true);
+
+      const fetchedPosts = await getPosts(
+        activeTag ?? undefined
+      );
+
+      setPosts(fetchedPosts);
+
+      const fetchedTags = await getTags();
+
+      setTags(fetchedTags);
+
+      // simulación paginado
+      if (page >= 3) {
+        setHasMore(false);
       }
-      if (page >= 3) setHasMore(false);
-      if (tags.length === 0) {
-        const fetchedTags = await api.getTags();
-        setTags(fetchedTags);
-      }
-    } catch (err) {
-      console.error("Error loading feed:", err);
+
+    } catch (error) {
+
+      console.error(
+        "Error cargando feed:",
+        error
+      );
+
     } finally {
       setLoading(false);
     }
-  }, [activeTag, page, tags.length]);
 
-  useEffect(() => { loadData(true); }, [activeTag]);
+  }, [activeTag, page]);
+
+
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting && hasMore && !loading) setPage(p => p + 1); },
-      { threshold: 1 }
-    );
-    if (loaderRef.current) observer.observe(loaderRef.current);
-    return () => { if (loaderRef.current) observer.unobserve(loaderRef.current); };
-  }, [hasMore, loading]);
+    loadData();
+  }, [loadData]);
 
-  useEffect(() => { if (page > 1) loadData(false); }, [page]);
+
+
+  useEffect(() => {
+
+    const observer =
+      new IntersectionObserver(
+        (entries) => {
+
+          if (
+            entries[0].isIntersecting &&
+            hasMore &&
+            !loading
+          ) {
+            setPage(prev => prev + 1);
+          }
+
+        },
+        {
+          threshold: 1
+        }
+      );
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+
+    return () => {
+
+      if (loaderRef.current) {
+        observer.unobserve(
+          loaderRef.current
+        );
+      }
+
+    };
+
+  }, [loading, hasMore]);
+
+
 
   return (
     <div className="flex flex-col h-full">
+
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Home</h1>
+
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+          Home
+        </h1>
+
       </header>
 
+
+
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-hide">
+
         <div className="flex gap-2 whitespace-nowrap">
+
           <button
             onClick={() => setActiveTag(null)}
             className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
               activeTag === null
                 ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
             }`}
           >
             All
           </button>
-          {tags.map(tag => (
+
+          {tags.map((tag) => (
+
             <button
-              key={tag}
-              onClick={() => setActiveTag(tag)}
+              key={tag._id}
+              onClick={() => setActiveTag(tag.name)}
               className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
-                activeTag === tag
+                activeTag === tag.name
                   ? "bg-indigo-600 text-white"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
               }`}
             >
-              #{tag}
+              #{tag.name}
             </button>
+
           ))}
+
         </div>
+
       </div>
 
+
+
       <div className="flex-1">
+
         {loading && posts.length === 0 ? (
+
           <div className="flex justify-center p-10">
+
             <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+
           </div>
+
         ) : posts.length === 0 ? (
-          <div className="p-10 text-center text-gray-400 dark:text-gray-600">No hay posts. ¡Sé el primero!</div>
-        ) : (
-          <div className="flex flex-col">
-            {posts.map((post) => (
-              <div key={post.id} className="relative">
-                <PostCard post={post} />
-                <Link to={`/post/${post.id}`} className="absolute inset-0 z-0" aria-label={`Ver post de ${post.user.nickName}`} />
-              </div>
-            ))}
-            <div ref={loaderRef} className="p-8 flex justify-center">
-              {hasMore
-                ? <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                : <p className="text-gray-400 text-sm">¡Ya viste todo! 🎉</p>
-              }
-            </div>
+
+          <div className="p-10 text-center text-gray-400">
+
+            No hay posts. ¡Sé el primero!
+
           </div>
+
+        ) : (
+
+          <div>
+
+            {posts.map((post) => (
+
+              <div
+                key={post._id}
+                className="relative"
+              >
+
+                <PostCard post={post} />
+
+                <Link
+                  to={`/post/${post._id}`}
+                  className="absolute inset-0"
+                />
+
+              </div>
+
+            ))}
+
+            <div
+              ref={loaderRef}
+              className="p-8 flex justify-center"
+            >
+
+              {hasMore ? (
+
+                <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"/>
+
+              ) : (
+
+                <p className="text-gray-400 text-sm">
+
+                  ¡Ya viste todo! 🎉
+
+                </p>
+
+              )}
+
+            </div>
+
+          </div>
+
         )}
+
       </div>
+
     </div>
   );
 };
 
+export default FeedPage;
 export const Home = () => {
   const { user } = useAuth();
   return user ? <FeedPage /> : <LandingPage />;

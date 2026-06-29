@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Image as ImageIcon, Hash, X } from "lucide-react";
-import { api } from "../services/api";
+import { createPost } from "../services/postService";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/Button";
 import { Avatar, AvatarFallback } from "../components/ui/Avatar";
@@ -41,8 +41,9 @@ export const CreatePost = () => {
     if (!description.trim() || !user) { setError("La descripción es obligatoria."); return; }
     try {
       setLoading(true);
-      await api.createPost({ userId: user.id, description, tags, images });
-      navigate(`/profile/${user.id}`);
+      await createPost({ user, description, tags });
+      console.log(user)
+      navigate(`/profile/${user._id}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al crear la publicación");
     } finally {

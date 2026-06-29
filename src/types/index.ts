@@ -1,10 +1,11 @@
 export interface User {
-  id: string;
+  _id: string;
   nickName: string;
+  name?: string;
 }
 
 export interface Post {
-  id: string;
+  _id: string;
   userId: string;
   user: User;
   description: string;
@@ -21,4 +22,9 @@ export interface Comment {
   user: User;
   text: string;
   createdAt: string;
+}
+
+export interface Tag {
+  _id: string;
+  name: string;
 }

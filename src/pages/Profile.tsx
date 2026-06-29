@@ -11,12 +11,12 @@ import { Button } from "../components/ui/Button";
 export const Profile = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser, logout } = useAuth();
-  const profileId = id || currentUser?.id;
+  const profileId = id || currentUser?._id;
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const isOwnProfile = currentUser?.id === profileId;
+  const isOwnProfile = currentUser?._id === profileId;
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -132,13 +132,13 @@ export const Profile = () => {
           </div>
         ) : (
           <div className="flex flex-col">
-            {posts.map((post) => (
-              <div key={post.id} className="relative">
-                <PostCard post={post} />
+            {posts.map((posts) => (
+              <div key={posts.id} className="relative">
+                <PostCard post={posts} />
                 <Link
-                  to={`/post/${post.id}`}
+                  to={`/post/${posts.id}`}
                   className="absolute inset-0 z-0"
-                  aria-label={`Ver post de ${post.user.nickName}`}
+                  aria-label={`Ver post de ${posts.user.nickName}`}
                 />
               </div>
             ))}
