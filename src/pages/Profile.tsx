@@ -1,22 +1,64 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, CalendarDays, LogOut } from "lucide-react";
-import { api } from "../services/api";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, MapPin, CalendarDays, LogOut, Trash2 } from "lucide-react";
+import { api } from "../api/cliente";
 import type { Post, User } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { PostCard } from "../components/features/PostCard";
 import { Avatar, AvatarFallback } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
+import { Dialog } from "../components/ui/Dialog";
 
 export const Profile = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser, logout } = useAuth();
   const profileId = id || currentUser?.id;
+  const navigate = useNavigate();
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
   const isOwnProfile = currentUser?.id === profileId;
+
+  const isFollowing = currentUser && profileUser?.followers?.some((f: any) => 
+    typeof f === 'string' ? f === currentUser.id : f.id === currentUser.id || f._id === currentUser.id
+  );
+
+  const handleFollowToggle = async () => {
+    if (!currentUser || !profileUser || followLoading) return;
+    try {
+      setFollowLoading(true);
+      if (isFollowing) {
+        await api.unfollowUser(currentUser.id, profileUser.id);
+      } else {
+        await api.followUser(currentUser.id, profileUser.id);
+      }
+      const updatedUser = await api.getUserById(profileUser.id);
+      setProfileUser(updatedUser);
+    } catch (err) {
+      console.error("Error toggling follow:", err);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const handleDeleteAccountClick = () => {
+    setIsDeleteAccountOpen(true);
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    if (!currentUser) return;
+    try {
+      await api.deleteUser(currentUser.id);
+      logout();
+      navigate("/register");
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      alert("Error al eliminar la cuenta");
+    }
+  };
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -70,7 +112,6 @@ export const Profile = () => {
         </div>
       </header>
 
-      {/* Cover + Avatar */}
       <div className="border-b border-gray-100 dark:border-gray-800">
         <div className="h-36 sm:h-48 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
         <div className="px-4 pb-4">
@@ -80,15 +121,36 @@ export const Profile = () => {
                 {profileUser.nickName.substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            {isOwnProfile && (
-              <Button
-                variant="outline"
-                className="font-bold rounded-full flex items-center gap-2"
-                onClick={logout}
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Cerrar sesión</span>
-              </Button>
+            {isOwnProfile ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="font-bold rounded-full flex items-center gap-2"
+                  onClick={logout}
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Cerrar sesión</span>
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="font-bold rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 px-4 py-2"
+                  onClick={handleDeleteAccountClick}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Eliminar cuenta</span>
+                </Button>
+              </div>
+            ) : (
+              currentUser && (
+                <Button
+                  variant={isFollowing ? "outline" : "default"}
+                  className="font-bold rounded-full px-5"
+                  onClick={handleFollowToggle}
+                  disabled={followLoading}
+                >
+                  {followLoading ? "Cargando..." : isFollowing ? "Dejar de seguir" : "Seguir"}
+                </Button>
+              )
             )}
           </div>
 
@@ -105,13 +167,12 @@ export const Profile = () => {
           </div>
 
           <div className="flex gap-5 text-sm">
-            <p className="text-gray-900 dark:text-white"><span className="font-bold">120</span> <span className="text-gray-500 dark:text-gray-400">Siguiendo</span></p>
-            <p className="text-gray-900 dark:text-white"><span className="font-bold">1.2K</span> <span className="text-gray-500 dark:text-gray-400">Seguidores</span></p>
+            <p className="text-gray-900 dark:text-white"><span className="font-bold">{profileUser.following?.length || 0}</span> <span className="text-gray-500 dark:text-gray-400">Siguiendo</span></p>
+            <p className="text-gray-900 dark:text-white"><span className="font-bold">{profileUser.followers?.length || 0}</span> <span className="text-gray-500 dark:text-gray-400">Seguidores</span></p>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-gray-100 dark:border-gray-800">
         <button className="flex-1 py-4 text-sm font-bold text-gray-900 dark:text-white border-b-2 border-indigo-600">
           Posts
@@ -124,7 +185,6 @@ export const Profile = () => {
         </button>
       </div>
 
-      {/* Posts */}
       <div className="flex-1">
         {posts.length === 0 ? (
           <div className="p-10 text-center text-gray-400 dark:text-gray-600">
@@ -134,7 +194,7 @@ export const Profile = () => {
           <div className="flex flex-col">
             {posts.map((post) => (
               <div key={post.id} className="relative">
-                <PostCard post={post} />
+                <PostCard post={post} onDelete={(deletedId) => setPosts(prev => prev.filter(p => p.id !== deletedId))} />
                 <Link
                   to={`/post/${post.id}`}
                   className="absolute inset-0 z-0"
@@ -145,6 +205,15 @@ export const Profile = () => {
           </div>
         )}
       </div>
+      <Dialog
+        isOpen={isDeleteAccountOpen}
+        onClose={() => setIsDeleteAccountOpen(false)}
+        title="¿Eliminar cuenta?"
+        description="¿Estás seguro de que querés eliminar tu cuenta? Esta acción es definitiva y borrará todas tus publicaciones y datos."
+        onConfirm={handleConfirmDeleteAccount}
+        confirmText="Eliminar Cuenta"
+        variant="destructive"
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
-import { api } from "../services/api";
+import { api } from "../api/cliente";
 import { useAuth } from "../context/AuthContext";
 
 const GoogleIcon = () => (
@@ -42,10 +42,9 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     if (!nickName || !password) { setError("Por favor completá todos los campos."); return; }
-    if (password !== "123456") { setError("Contraseña incorrecta. (Demo: la contraseña es 123456)"); return; }
     try {
       setLoading(true);
-      const user = await api.login(nickName);
+      const user = await api.login(nickName, password);
       if (user) { login(user); navigate("/"); }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
@@ -56,9 +55,9 @@ export default function LoginPage() {
 
   const handleSocialLogin = async (provider: string) => {
     setSocialLoading(provider);
-    await new Promise(r => setTimeout(r, 1500));
-    setSocialLoading(null);
-    setError(`El login con ${provider} no está disponible en esta demo.`);
+    await api.login(provider, password).catch((err) => {
+      setError(err instanceof Error ? err.message : `Error al iniciar sesión con ${provider}`);
+    }).finally(() => setSocialLoading(null));
   };
 
   const socialProviders = [

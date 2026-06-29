@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, MessageCircle } from "lucide-react";
-import { api } from "../services/api";
+import { api } from "../api/cliente";
 import type { Post } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { PostCard } from "../components/features/PostCard";
@@ -71,7 +71,6 @@ export const PostDetail = () => {
 
   return (
     <div className="flex flex-col min-h-full bg-white dark:bg-gray-950">
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
@@ -82,12 +81,10 @@ export const PostDetail = () => {
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Post</h1>
       </header>
 
-      {/* Main Post */}
       <div className="border-b border-gray-100 dark:border-gray-800">
-        <PostCard post={post} isDetail={true} />
+        <PostCard post={post} isDetail={true} onDelete={() => navigate("/")} />
       </div>
 
-      {/* Add Comment Form */}
       {user ? (
         <div className="p-4 border-b border-gray-100 dark:border-gray-800">
           <form onSubmit={handleAddComment} className="flex gap-3">
@@ -124,7 +121,6 @@ export const PostDetail = () => {
         </div>
       )}
 
-      {/* Comments List */}
       <div className="flex-1">
         {post.comments.length === 0 ? (
           <div className="p-10 text-center text-gray-400 dark:text-gray-600">

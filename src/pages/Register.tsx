@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from "lucide-react";
-import { api } from "../services/api";
+import { api } from "../api/cliente";
 import { useAuth } from "../context/AuthContext";
 
 const GoogleIcon = () => (
@@ -68,7 +68,7 @@ export default function RegisterPage() {
     if (password !== confirmPassword) { setError("Las contraseñas no coinciden."); return; }
     try {
       setLoading(true);
-      const newUser = await api.register(nickName);
+      const newUser = await api.register(nickName, password);
       if (newUser) { login(newUser); navigate("/"); }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al registrar usuario");
@@ -79,9 +79,9 @@ export default function RegisterPage() {
 
   const handleSocialLogin = async (provider: string) => {
     setSocialLoading(provider);
-    await new Promise(r => setTimeout(r, 1500));
-    setSocialLoading(null);
-    setError(`El registro con ${provider} no está disponible en esta demo.`);
+    await api.register(provider, password).catch((err) => {
+      setError(err instanceof Error ? err.message : `Error al registrar con ${provider}`);
+    }).finally(() => setSocialLoading(null));
   };
 
   const socialProviders = [

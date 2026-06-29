@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../services/api";
+import { api } from "../api/cliente";
 import type { Post } from "../types";
 import { PostCard } from "../components/features/PostCard";
 import { useAuth } from "../context/AuthContext";
@@ -264,14 +264,22 @@ const FeedPage = () => {
 
   const loadData = useCallback(async (isReset = false) => {
     try {
-      if (isReset) { setLoading(true); setPage(1); }
-      const fetchedPosts = await api.getPosts(activeTag || undefined);
+      setLoading(true);
+      const targetPage = isReset ? 1 : page;
+      if (isReset) { setPage(1); }
+      const limit = 10;
+      const fetchedPosts = await api.getPosts(activeTag || undefined, targetPage, limit);
       if (isReset) {
         setPosts(fetchedPosts);
+        setHasMore(fetchedPosts.length === limit);
       } else {
-        setPosts(prev => [...prev, ...fetchedPosts.map((p: Post) => ({ ...p, id: p.id + Math.random().toString(36) }))]);
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newPosts = fetchedPosts.filter(p => !existingIds.has(p.id));
+          return [...prev, ...newPosts];
+        });
+        setHasMore(fetchedPosts.length === limit);
       }
-      if (page >= 3) setHasMore(false);
       if (tags.length === 0) {
         const fetchedTags = await api.getTags();
         setTags(fetchedTags);
@@ -341,7 +349,7 @@ const FeedPage = () => {
           <div className="flex flex-col">
             {posts.map((post) => (
               <div key={post.id} className="relative">
-                <PostCard post={post} />
+                <PostCard post={post} onDelete={(deletedId) => setPosts(prev => prev.filter(p => p.id !== deletedId))} />
                 <Link to={`/post/${post.id}`} className="absolute inset-0 z-0" aria-label={`Ver post de ${post.user.nickName}`} />
               </div>
             ))}

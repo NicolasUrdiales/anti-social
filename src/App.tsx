@@ -12,9 +12,9 @@ import { CreatePost } from "./pages/CreatePost";
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
           <LayoutWrapper>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
@@ -29,9 +29,9 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </LayoutWrapper>
-        </BrowserRouter>
-      </AuthProvider>
-    </ThemeProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
 
