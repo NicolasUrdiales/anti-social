@@ -242,17 +242,7 @@ export const CreatePost = () => {
           </div>
         </div>
 
-        <div>
-          <label className="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mb-2">
-            <ImageIcon className="w-4 h-4" /> O agregar imagen (URL)
-          </label>
-          <Input
-            placeholder="Pegá una URL de imagen y presioná Enter..."
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            onKeyDown={handleAddImage}
-          />
-        </div>
+       
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mb-2">
             <Hash className="w-4 h-4" /> Agregar etiquetas
