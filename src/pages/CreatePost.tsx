@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Hash, X, Upload, Link2 } from "lucide-react";
+import { ArrowLeft, Hash, X, Upload} from "lucide-react";
 import { api } from "../api/cliente";
 import type { Tag } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -15,7 +15,6 @@ export const CreatePost = () => {
   const navigate = useNavigate();
 
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
@@ -33,13 +32,7 @@ export const CreatePost = () => {
     api.getTagObjects().then(setAvailableTags).catch(() => {});
   }, []);
 
-  const handleAddImageUrl = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && imageUrl.trim()) {
-      e.preventDefault();
-      setImages([...images, imageUrl.trim()]);
-      setImageUrl("");
-    }
-  };
+ 
 
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && tagInput.trim()) {
@@ -229,17 +222,7 @@ export const CreatePost = () => {
 
       <div className="border-t border-gray-100 dark:border-gray-800 p-4 space-y-4">
 
-        <div>
-          <label className="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mb-2">
-            <Link2 className="w-4 h-4" /> URLs de imágenes
-          </label>
-          <Input
-            placeholder="Ingresá una URL y presioná Enter..."
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            onKeyDown={handleAddImageUrl}
-          />
-        </div>
+        
 
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mb-2">
