@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, User, PlusCircle, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import { Button } from "../ui/Button";
+import { ToastContainer } from "../ui/Toast";
+import { FeaturedPosts } from "../features/FeaturedPosts";
 import { cn } from "../../lib/utils";
 
 interface LayoutWrapperProps {
@@ -14,6 +16,12 @@ export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const navItems = [
     { name: "Home", path: "/", icon: Home },
@@ -63,6 +71,7 @@ export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
           </div>
         </div>
         <main>{children}</main>
+        <ToastContainer />
       </div>
     );
   }
@@ -106,7 +115,7 @@ export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
             <Button
               variant="ghost"
               className="w-full justify-center lg:justify-start rounded-full p-3 lg:px-4 h-auto text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-              onClick={logout}
+              onClick={handleLogout}
             >
               <LogOut className="w-5 h-5 lg:mr-3 shrink-0" />
               <span className="hidden lg:block font-semibold">Logout</span>
@@ -120,22 +129,7 @@ export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
 
         <aside className="hidden lg:block w-72 xl:w-80 p-4 xl:p-6 sticky top-0 h-screen overflow-y-auto shrink-0">
           <div className="space-y-4">
-            <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl p-4">
-              <h3 className="font-bold text-lg mb-3 text-gray-900 dark:text-white">Trending 🔥</h3>
-              <div className="space-y-3">
-                {[
-                  { tag: "#TP2BackEnd", count: "1,234" },
-                  { tag: "#ReactJS", count: "5,432" },
-                  { tag: "#UnaHur", count: "892" },
-                  { tag: "#AntiSocial", count: "3,120" },
-                ].map(({ tag, count }) => (
-                  <div key={tag} className="group cursor-pointer">
-                    <p className="font-bold text-gray-900 dark:text-white group-hover:text-indigo-500 transition-colors text-sm">{tag}</p>
-                    <p className="text-xs text-gray-500">{count} posts</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <FeaturedPosts />
 
             <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 text-white">
               <h3 className="font-bold text-base mb-1">Invitá amigos 👀</h3>
@@ -148,6 +142,8 @@ export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
             </div>
           </div>
         </aside>
+
+        <ToastContainer />
 
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 flex justify-around items-center py-2 px-4 z-50">
           {navItems.map((item) => {

@@ -4,7 +4,9 @@ import { ArrowLeft, MapPin, CalendarDays, LogOut, Trash2 } from "lucide-react";
 import { api } from "../api/cliente";
 import type { Post, User } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { PostCard } from "../components/features/PostCard";
+import { SearchUsers } from "../components/features/SearchUsers";
 import { Avatar, AvatarFallback } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Dialog } from "../components/ui/Dialog";
@@ -14,6 +16,7 @@ export const Profile = () => {
   const { user: currentUser, logout } = useAuth();
   const profileId = id || currentUser?.id;
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -32,13 +35,15 @@ export const Profile = () => {
       setFollowLoading(true);
       if (isFollowing) {
         await api.unfollowUser(currentUser.id, profileUser.id);
+        addToast("info", `Dejaste de seguir a ${profileUser.nickName || profileUser.name}`);
       } else {
         await api.followUser(currentUser.id, profileUser.id);
+        addToast("success", `Ahora seguís a ${profileUser.nickName || profileUser.name}`);
       }
       const updatedUser = await api.getUserById(profileUser.id);
       setProfileUser(updatedUser);
     } catch (err) {
-      console.error("Error toggling follow:", err);
+      addToast("error", "Error al seguir/dejar de seguir");
     } finally {
       setFollowLoading(false);
     }
@@ -51,12 +56,21 @@ export const Profile = () => {
   const handleConfirmDeleteAccount = async () => {
     if (!currentUser) return;
     try {
+      const userPosts = await api.getPostsByUser(currentUser.id);
+      const allImages = await api.getPostImages();
+      for (const post of userPosts) {
+        const postImages = allImages.filter(img => img.post === post.id);
+        for (const img of postImages) {
+          await api.deletePostImage(img.id);
+        }
+        await api.deletePost(post.id);
+      }
       await api.deleteUser(currentUser.id);
+      addToast("info", "Cuenta eliminada. Redirigiendo al registro.");
       logout();
       navigate("/register");
     } catch (err) {
-      console.error("Error deleting user:", err);
-      alert("Error al eliminar la cuenta");
+      addToast("error", "Error al eliminar la cuenta");
     }
   };
 
@@ -99,16 +113,19 @@ export const Profile = () => {
   return (
     <div className="flex flex-col min-h-full bg-white dark:bg-gray-950">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-4">
+      <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-4 isolate">
         <Link
           to="/"
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors"
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{profileUser.nickName}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight truncate">{profileUser.nickName}</h1>
           <p className="text-xs text-gray-400 dark:text-gray-500">{posts.length} posts</p>
+        </div>
+        <div className="w-48 shrink-0">
+          <SearchUsers />
         </div>
       </header>
 
@@ -126,7 +143,7 @@ export const Profile = () => {
                 <Button
                   variant="outline"
                   className="font-bold rounded-full flex items-center gap-2"
-                  onClick={logout}
+                    onClick={() => { logout(); addToast("info", "Cerraste sesión"); navigate("/login"); }}
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Cerrar sesión</span>
@@ -193,14 +210,7 @@ export const Profile = () => {
         ) : (
           <div className="flex flex-col">
             {posts.map((post) => (
-              <div key={post.id} className="relative">
-                <PostCard post={post} onDelete={(deletedId) => setPosts(prev => prev.filter(p => p.id !== deletedId))} />
-                <Link
-                  to={`/post/${post.id}`}
-                  className="absolute inset-0 z-0"
-                  aria-label={`Ver post de ${post.user.nickName}`}
-                />
-              </div>
+              <PostCard key={post.id} post={post} onDelete={(deletedId) => setPosts(prev => prev.filter(p => p.id !== deletedId))} />
             ))}
           </div>
         )}

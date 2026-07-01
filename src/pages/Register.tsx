@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle, Loader } from "lucide-react";
 import { api } from "../api/cliente";
-import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
@@ -55,9 +55,10 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { addToast } = useToast();
 
   const passwordsMatch = confirmPassword && password === confirmPassword;
 
@@ -68,10 +69,14 @@ export default function RegisterPage() {
     if (password !== confirmPassword) { setError("Las contraseñas no coinciden."); return; }
     try {
       setLoading(true);
-      const newUser = await api.register(nickName, password);
-      if (newUser) { login(newUser); navigate("/"); }
+      await api.register(nickName, password);
+      setSuccess(true);
+      addToast("success", `¡Usuario ${nickName} registrado correctamente!`);
+      setTimeout(() => navigate("/login?registered=true"), 1500);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al registrar usuario");
+      const msg = err instanceof Error ? err.message : "Error al registrar usuario";
+      setError(msg);
+      addToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -120,6 +125,7 @@ export default function RegisterPage() {
             {socialProviders.map(({ name, icon, bg }) => (
               <button
                 key={name}
+                type="button"
                 onClick={() => handleSocialLogin(name)}
                 disabled={!!socialLoading}
                 className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${bg} disabled:opacity-60 disabled:cursor-not-allowed`}
@@ -140,6 +146,18 @@ export default function RegisterPage() {
             <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
           </div>
 
+          {success ? (
+            <div className="flex flex-col items-center gap-4 py-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">¡Usuario registrado!</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Redirigiendo al inicio de sesión...</p>
+              </div>
+              <Loader className="w-5 h-5 text-indigo-600 animate-spin" />
+            </div>
+          ) : (
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="nickName" className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -234,6 +252,7 @@ export default function RegisterPage() {
               }
             </button>
           </form>
+          )}
         </div>
       </div>
     </div>

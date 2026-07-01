@@ -4,6 +4,7 @@ import { ArrowLeft, MessageCircle } from "lucide-react";
 import { api } from "../api/cliente";
 import type { Post } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { PostCard } from "../components/features/PostCard";
 import { CommentItem } from "../components/features/CommentItem";
 import { Button } from "../components/ui/Button";
@@ -13,6 +14,7 @@ export const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToast } = useToast();
 
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,11 +47,26 @@ export const PostDetail = () => {
       const newComment = await api.addComment(post.id, user.id, commentText);
       setPost((prev: Post | null) => prev ? { ...prev, comments: [...prev.comments, newComment] } : null);
       setCommentText("");
+      addToast("success", "Comentario agregado");
     } catch (err) {
-      console.error("Error adding comment:", err);
+      addToast("error", "Error al agregar el comentario");
     } finally {
       setSubmittingComment(false);
     }
+  };
+
+  const handleUpdateComment = (commentId: string, text: string) => {
+    setPost((prev: Post | null) => prev ? {
+      ...prev,
+      comments: prev.comments.map((c) => c.id === commentId ? { ...c, text } : c),
+    } : null);
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setPost((prev: Post | null) => prev ? {
+      ...prev,
+      comments: prev.comments.filter((c) => c.id !== commentId),
+    } : null);
   };
 
   if (loading) {
@@ -71,7 +88,7 @@ export const PostDetail = () => {
 
   return (
     <div className="flex flex-col min-h-full bg-white dark:bg-gray-950">
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-4">
+      <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-4 isolate">
         <button
           onClick={() => navigate(-1)}
           className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors"
@@ -99,6 +116,7 @@ export const PostDetail = () => {
                 onChange={(e) => setCommentText(e.target.value)}
                 className="w-full bg-transparent border-none outline-none text-base text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 py-2"
                 autoComplete="off"
+                required
               />
               <div className="flex justify-end">
                 <Button
@@ -122,14 +140,14 @@ export const PostDetail = () => {
       )}
 
       <div className="flex-1">
-        {post.comments.length === 0 ? (
+        {!post.comments || post.comments.length === 0 ? (
           <div className="p-10 text-center text-gray-400 dark:text-gray-600">
             Sin comentarios aún. ¡Sé el primero en responder!
           </div>
         ) : (
           <div className="flex flex-col">
             {post.comments.map((comment) => (
-              <CommentItem key={comment.id} comment={comment} />
+              <CommentItem key={comment.id} comment={comment} onUpdate={handleUpdateComment} onDelete={handleDeleteComment} />
             ))}
           </div>
         )}

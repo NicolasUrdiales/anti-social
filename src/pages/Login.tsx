@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from "lucide-react";
 import { api } from "../api/cliente";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
@@ -35,8 +36,12 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
+  const [registeredMessage, setRegisteredMessage] = useState(
+    new URLSearchParams(window.location.search).get("registered") === "true"
+  );
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { addToast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +50,13 @@ export default function LoginPage() {
     try {
       setLoading(true);
       const user = await api.login(nickName, password);
-      if (user) { login(user); navigate("/"); }
+      login(user);
+      addToast("success", `¡Bienvenido de nuevo, ${user.nickName || user.name}!`);
+      navigate("/");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión");
+      const msg = err instanceof Error ? err.message : "Error al iniciar sesión";
+      setError(msg);
+      addToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -55,9 +64,24 @@ export default function LoginPage() {
 
   const handleSocialLogin = async (provider: string) => {
     setSocialLoading(provider);
-    await api.login(provider, password).catch((err) => {
-      setError(err instanceof Error ? err.message : `Error al iniciar sesión con ${provider}`);
-    }).finally(() => setSocialLoading(null));
+    try {
+      const users = await api.getUsers();
+      const user = users.find(u => u.nickName === provider);
+      if (user) {
+        login(user);
+        navigate("/");
+      } else {
+        const msg = `No se encontró una cuenta vinculada a ${provider}`;
+        setError(msg);
+        addToast("error", msg);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : `Error al iniciar sesión con ${provider}`;
+      setError(msg);
+      addToast("error", msg);
+    } finally {
+      setSocialLoading(null);
+    }
   };
 
   const socialProviders = [
@@ -96,6 +120,7 @@ export default function LoginPage() {
             {socialProviders.map(({ name, icon, bg }) => (
               <button
                 key={name}
+                type="button"
                 onClick={() => handleSocialLogin(name)}
                 disabled={!!socialLoading}
                 className={`flex items-center justify-center gap-2 h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${bg} disabled:opacity-60 disabled:cursor-not-allowed`}
@@ -157,6 +182,13 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {registeredMessage && (
+              <div className="flex items-start gap-2 p-3 sm:p-4 rounded-xl sm:rounded-2xl text-sm bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-900">
+                <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p>¡Usuario registrado correctamente! Iniciá sesión con tu cuenta.</p>
+              </div>
+            )}
 
             {error && (
               <div className="flex items-start gap-2 p-3 sm:p-4 rounded-xl sm:rounded-2xl text-sm bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900">

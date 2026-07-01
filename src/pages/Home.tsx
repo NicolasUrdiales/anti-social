@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/cliente";
 import type { Post } from "../types";
 import { PostCard } from "../components/features/PostCard";
+import { SearchUsers } from "../components/features/SearchUsers";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/Button";
 import {
@@ -306,8 +307,13 @@ const FeedPage = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Home</h1>
+      <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-4 py-3 isolate">
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white shrink-0">Home</h1>
+          <div className="w-full max-w-64">
+            <SearchUsers />
+          </div>
+        </div>
       </header>
 
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-hide">
@@ -348,10 +354,7 @@ const FeedPage = () => {
         ) : (
           <div className="flex flex-col">
             {posts.map((post) => (
-              <div key={post.id} className="relative">
-                <PostCard post={post} onDelete={(deletedId) => setPosts(prev => prev.filter(p => p.id !== deletedId))} />
-                <Link to={`/post/${post.id}`} className="absolute inset-0 z-0" aria-label={`Ver post de ${post.user.nickName}`} />
-              </div>
+              <PostCard key={post.id} post={post} onDelete={(deletedId) => setPosts(prev => prev.filter(p => p.id !== deletedId))} />
             ))}
             <div ref={loaderRef} className="p-8 flex justify-center">
               {hasMore

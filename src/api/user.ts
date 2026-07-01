@@ -29,16 +29,16 @@ export const userService = {
         return apiClient.get<User>(`/user/${nickName}`);
     },
 
-    async login(nickName: string, password: string): Promise<User> {
-        return apiClient.post<User>('/users/login', { nickName, password });
-    },
-
     async followUser(userId: string, followId: string): Promise<{ message: string }> {
         return apiClient.post<{ message: string }>(`/users/${userId}/follow/${followId}`, {});
     },
 
     async unfollowUser(userId: string, unfollowId: string): Promise<{ message: string }> {
         return apiClient.delete<{ message: string }>(`/users/${userId}/unfollow/${unfollowId}`);
+    },
+
+    async login(nickName: string, password: string): Promise<User> {
+        return apiClient.post<User>('/users/login', { nickName, password });
     }
 
 }

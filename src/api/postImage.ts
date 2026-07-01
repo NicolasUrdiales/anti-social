@@ -4,6 +4,7 @@ import { apiClient } from "./cliente"
 export const postImageService = {
     getPostImages:() => apiClient.get<PostImage[]>('/postImages'),
     getPostImageById: (id: string) => apiClient.get<PostImage>(`/postImages/${id}`),
+    createPostImage: (url: string, postId: string) => apiClient.post<PostImage>('/postImages', { url, post: postId }),
     upload: (file: File, postId: string) => {
         const formData = new FormData();
         formData.append('url', file);

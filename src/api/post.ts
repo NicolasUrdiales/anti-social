@@ -13,4 +13,5 @@ export const postService = {
 
     addImage: (id: string, url: string) => apiClient.post<Post>(`/posts/${id}/images`, { url }),
     addTag: (id: string, tagId: string) => apiClient.post<Post>(`/posts/${id}/tags`, { tagId }),
+
 }

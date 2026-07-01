@@ -32,6 +32,7 @@ export interface Post {
   tags: PostTag[];
   createdAt: string;
   comments: Comment[];
+  likes?: string[];
 }
 
 export interface CreatePostRequest {
@@ -54,8 +55,8 @@ export interface Comment {
 }
 
 export interface CreateCommentRequest {
-  postId: string;
-  userId: string;
+  post: string;
+  user: string;
   text: string;
 }
 

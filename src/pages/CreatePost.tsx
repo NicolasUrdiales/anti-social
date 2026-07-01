@@ -1,35 +1,39 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Image as ImageIcon, Hash, X, Upload } from "lucide-react";
+import { ArrowLeft, Hash, X, Upload, Link2 } from "lucide-react";
 import { api } from "../api/cliente";
+import type { Tag } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { Button } from "../components/ui/Button";
 import { Avatar, AvatarFallback } from "../components/ui/Avatar";
 import { Input } from "../components/ui/Input";
 
 export const CreatePost = () => {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    setIsMobile(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent));
-  }, []);
-
-  
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [dragActive, setDragActive] = useState(false);
 
-  const handleAddImage = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    setIsMobile(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent));
+    api.getTagObjects().then(setAvailableTags).catch(() => {});
+  }, []);
+
+  const handleAddImageUrl = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && imageUrl.trim()) {
       e.preventDefault();
       setImages([...images, imageUrl.trim()]);
@@ -40,13 +44,17 @@ export const CreatePost = () => {
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && tagInput.trim()) {
       e.preventDefault();
-      const newTag = tagInput.trim().replace(/^#/, "");
-      if (!tags.includes(newTag)) setTags([...tags, newTag]);
+      const name = tagInput.trim().replace(/^#/, "");
+      const existing = availableTags.find(t => t.name === name);
+      if (existing) {
+        if (!selectedTags.some(t => t.id === existing.id)) setSelectedTags([...selectedTags, existing]);
+      } else {
+        if (!selectedTags.some(t => t.name === name)) setSelectedTags([...selectedTags, { id: name, name }]);
+      }
       setTagInput("");
     }
   };
 
-  
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -93,16 +101,38 @@ export const CreatePost = () => {
     if (!description.trim() || !user) { setError("La descripción es obligatoria."); return; }
     try {
       setLoading(true);
-      
-      const post = await api.createPost({ userId: user.id, description, tags, images });
-      
+
+      const tagInputName = tagInput.trim().replace(/^#/, "");
+      const allSelected = tagInputName && !selectedTags.some(t => t.name === tagInputName)
+        ? [...selectedTags, { id: tagInputName, name: tagInputName }]
+        : selectedTags;
+
+      const tagIds: string[] = [];
+      for (const tag of allSelected) {
+        const existing = availableTags.find(t => t.name === tag.name);
+        if (existing) {
+          tagIds.push(existing.id);
+        } else {
+          const created = await api.createTag(tag.name);
+          tagIds.push(created.id);
+        }
+      }
+      const post = await api.createPost({ userId: user.id, description, tags: tagIds });
+
+      for (const url of images) {
+        await api.createPostImage(url, post.id);
+      }
+
       if (selectedFile && post.id) {
         await api.uploadImage(selectedFile, post.id);
       }
-      
+
+      addToast("success", "¡Publicación creada con éxito!");
       navigate(`/profile/${user.id}`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al crear la publicación");
+      const msg = err instanceof Error ? err.message : "Error al crear la publicación";
+      setError(msg);
+      addToast("error", msg);
     } finally {
       setLoading(false);
     }
@@ -118,7 +148,7 @@ export const CreatePost = () => {
 
   return (
     <div className="flex flex-col min-h-full bg-white dark:bg-gray-950">
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-3 py-2 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 px-3 py-2 flex items-center justify-between isolate">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -182,12 +212,12 @@ export const CreatePost = () => {
             </div>
           )}
 
-          {tags.length > 0 && (
+          {selectedTags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
-              {tags.map(tag => (
-                <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium border border-indigo-100 dark:border-indigo-900">
-                  #{tag}
-                  <button onClick={() => setTags(tags.filter(t => t !== tag))} className="hover:text-indigo-900 dark:hover:text-indigo-200 ml-0.5">
+              {selectedTags.map(tag => (
+                <span key={tag.id} className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium border border-indigo-100 dark:border-indigo-900">
+                  #{tag.name}
+                  <button onClick={() => setSelectedTags(selectedTags.filter(t => t.id !== tag.id))} className="hover:text-indigo-900 dark:hover:text-indigo-200 ml-0.5">
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -197,9 +227,20 @@ export const CreatePost = () => {
         </div>
       </div>
 
-      
       <div className="border-t border-gray-100 dark:border-gray-800 p-4 space-y-4">
-        
+
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mb-2">
+            <Link2 className="w-4 h-4" /> URLs de imágenes
+          </label>
+          <Input
+            placeholder="Ingresá una URL y presioná Enter..."
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            onKeyDown={handleAddImageUrl}
+          />
+        </div>
+
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mb-2">
             <Upload className="w-4 h-4" /> {isMobile ? "Subir imagen desde tu dispositivo" : "Subir imagen desde tu PC"}
@@ -242,13 +283,33 @@ export const CreatePost = () => {
           </div>
         </div>
 
-       
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 mb-2">
-            <Hash className="w-4 h-4" /> Agregar etiquetas
+            <Hash className="w-4 h-4" /> Etiquetas
           </label>
+          {availableTags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {availableTags.map(tag => (
+                <button
+                  key={tag.id}
+                  onClick={() => {
+                    setSelectedTags(prev =>
+                      prev.some(t => t.id === tag.id) ? prev.filter(t => t.id !== tag.id) : [...prev, tag]
+                    );
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                    selectedTags.some(t => t.id === tag.id)
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-indigo-400"
+                  }`}
+                >
+                  #{tag.name}
+                </button>
+              ))}
+            </div>
+          )}
           <Input
-            placeholder="Escribí una etiqueta y presioná Enter..."
+            placeholder={availableTags.length > 0 ? "O escribí una nueva y presioná Enter..." : "Escribí una etiqueta y presioná Enter..."}
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleAddTag}
